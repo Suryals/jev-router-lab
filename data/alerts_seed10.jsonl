@@ -1,0 +1,10 @@
+{"id": "a001", "alert": "disk usage 92% on prod-db-1, growing 1% per hour, no customer impact yet", "gold": {"category": "capacity", "priority": "P2", "page_human": false}}
+{"id": "a002", "alert": "checkout-api 5xx rate 34% for 6 minutes, error budget burning, pager not yet fired", "gold": {"category": "availability", "priority": "P1", "page_human": true}}
+{"id": "a003", "alert": "nightly BQ export job finished 40 min late, downstream dashboard refreshed successfully", "gold": {"category": "noise", "priority": "P3", "page_human": false}}
+{"id": "a004", "alert": "p99 latency on search-service up from 180ms to 900ms since last deploy, error rate normal", "gold": {"category": "performance", "priority": "P2", "page_human": false}}
+{"id": "a005", "alert": "3 failed console logins for svc-dataproc account from unrecognized IP range in 10 minutes", "gold": {"category": "security", "priority": "P2", "page_human": true}}
+{"id": "a006", "alert": "Dataproc cluster etl-prod-07 lost 4 of 20 workers, autoscaler replacing, jobs still running", "gold": {"category": "capacity", "priority": "P3", "page_human": false}}
+{"id": "a007", "alert": "Kafka consumer lag on payments-events topic at 2.1M messages and climbing, settlement SLA at risk in 45 min", "gold": {"category": "availability", "priority": "P1", "page_human": true}}
+{"id": "a008", "alert": "host prod-web-14 memory alert flapping 6 times in the last hour, each clearing within 60s", "gold": {"category": "noise", "priority": "P3", "page_human": false}}
+{"id": "a009", "alert": "GCS bucket policy on analytics-exports changed to allUsers read by terraform apply from CI", "gold": {"category": "security", "priority": "P1", "page_human": true}}
+{"id": "a010", "alert": "Airflow DAG revenue_daily failed twice, retry 3 of 3 running, downstream finance report due 09:00 IST", "gold": {"category": "availability", "priority": "P2", "page_human": false}}
