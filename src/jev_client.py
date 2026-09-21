@@ -20,6 +20,10 @@ load_dotenv()
 JEV_URL = "https://api.typesafe.ai/v1/systemone"
 MODEL = "jev-latest"
 
+# One persistent connection for the process: a fresh TLS handshake to the
+# US endpoint costs ~500-800ms from here, vs ~310ms total when reused.
+_client = httpx.Client(timeout=30.0)
+
 
 def noul(instructions: str) -> dict:
     """Yes/no question -> {"noul": probability 0..1}."""
@@ -38,7 +42,7 @@ def ask(state: dict | str, questions: dict[str, dict]) -> dict:
     """
     key = os.environ["JEV_API_KEY"]
     started = time.perf_counter()
-    resp = httpx.post(
+    resp = _client.post(
         JEV_URL,
         headers={"Authorization": f"Bearer {key}"},
         json={"model": MODEL, "state": state, "questions": questions},
