@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Do you need an LLM to route alerts? Jev vs Qwen3.8-27B vs Claude Sonnet 5 — Surya</title>
-<meta name="description" content="310 labeled AIOps alerts, three routers, one question: how much intelligence does triage actually need? A shadow-mode eval of TypeSafe's Jev decision model against a local Qwen and Claude Sonnet 5.">
+<title>Testing Jev: can a model that can't talk route my alerts? — Surya</title>
+<meta name="description" content="TypeSafe's new System One model vs two LLM yardsticks — Qwen3.8-27B and Claude Sonnet 5 — on 310 labeled AIOps alerts. A shadow-mode eval of whether Jev earns the routing layer of an agentic system.">
 <meta name="theme-color" content="#FBFAF7">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -71,8 +71,8 @@ li{margin-bottom:.5em}
 
 <header class="article-header">
   <span class="eyebrow">Lab notebook · Agentic AIOps</span>
-  <h1>Do you need an LLM to route alerts?</h1>
-  <p class="article-sub">Jev vs Qwen3.8-27B vs Claude Sonnet 5 — 310 labeled AIOps alerts, three routers, one question: how much intelligence does triage actually need?</p>
+  <h1>Testing Jev: can a model that can't talk route my alerts?</h1>
+  <p class="article-sub">TypeSafe's new "System One" model vs two LLM yardsticks — Qwen3.8-27B and Claude Sonnet 5 — on 310 labeled AIOps alerts.</p>
   <div class="article-meta"><span>Suryaprakash Lakshmanan</span><span class="sep">·</span><span>September 2026</span></div>
   <div class="tiles">
     <div class="tile"><small>Alerts</small><b>310</b><span>labeled · 3 decisions each</span></div>
@@ -84,28 +84,36 @@ li{margin-bottom:.5em}
 
 <article>
 
-<p>TypeSafe AI came out of stealth last week with Jev, a model they call a
-"System One model." It doesn't generate text. At all. You send it state plus
-typed questions, it sends back probability distributions. Their pitch is
-basically "a smart <code>if</code> statement" — 70–500ms, $0.042 per million
-input tokens, output free.</p>
+<p>Jev can't write a sentence.</p>
 
-<p>I'm building an autonomous ops platform where a supervisor agent routes
-alerts to specialist agents, and every one of those routing decisions is
-currently an LLM call. So the claim I actually care about is narrower than
-their marketing: <b>can a decision-only model replace an LLM at the routing
-layer of an agentic system?</b> That's a measurable question. So I measured
-it.</p>
+<p>That's the whole hook. TypeSafe AI came out of stealth last week with a
+model they call a "System One model": it doesn't generate text at all. You
+send it state plus typed questions, it sends back probability distributions.
+Their pitch is basically "a smart <code>if</code> statement" — 70–500ms,
+$0.042 per million input tokens, output free, up to 100x faster and 200x
+cheaper than using an LLM for the same decision.</p>
 
-<h2>The setup</h2>
+<p>Those are launch-week numbers from a launch-week company, and I have a
+place where they'd matter: I'm building an autonomous ops platform where a
+supervisor agent routes alerts to specialist agents, and every one of those
+routing decisions is currently an LLM call. If Jev's claims hold, that's
+exactly the layer it should own.</p>
 
-<p>Three routers, same job, same data:</p>
+<p>So this whole post is one experiment with one purpose: <b>put Jev through
+realistic alert triage and see if it earns the routing layer.</b> The LLMs in
+the comparison aren't the subject — they're the yardsticks Jev has to measure
+up against.</p>
+
+<h2>The experiment</h2>
+
+<p>To judge Jev you need a bar to clear, so it runs against two of them — the
+router I'd use today and the strongest one money buys:</p>
 <ul>
-  <li><b>Jev 1.13</b> via TypeSafe's API</li>
+  <li><b>Jev 1.13</b> via TypeSafe's API — the model under test</li>
   <li><b>Qwen3.8-27B</b> running locally on my M5 Max via LM Studio (the same
-  model from my earlier eval episodes)</li>
-  <li><b>Claude Sonnet 5</b> via OpenRouter, structured outputs, as the
-  frontier baseline</li>
+  model from my earlier eval episodes) — the practical yardstick</li>
+  <li><b>Claude Sonnet 5</b> via OpenRouter, structured outputs — the frontier
+  yardstick</li>
 </ul>
 
 <p>The job is L1 triage, mirrored from my AIOps prototype: for each alert,
@@ -135,7 +143,7 @@ observed latency, and if your agent framework makes routing calls without a
 keep-alive client, you're adding half a second of pure handshake to every
 hop.</p>
 
-<h2>Results</h2>
+<h2>How Jev measured up</h2>
 
 <figure>
   <picture>
@@ -158,17 +166,17 @@ hop.</p>
 
 <p>Three things jumped out.</p>
 
-<p><b>Sonnet buys you almost nothing here.</b> The frontier model wins
-category by 1–3 points and page_human by one, at 100x Jev's per-alert cost and
-14x its latency — and it's the <em>worst</em> of the three at priority. For
-structured triage decisions, frontier-level reasoning is mostly wasted spend.
+<p><b>Jev gives up almost nothing to the frontier model.</b> Sonnet wins
+category by 3 points and page_human by 9, at 100x Jev's per-alert cost and 14x
+its latency — and Jev actually <em>beats</em> it on priority. For structured
+triage decisions, what you're buying from an LLM is mostly wasted reasoning.
 (Sonnet's run cost $0.75 total. Jev's cost $0.0072. The local model cost
 sixteen minutes of my Mac's time.)</p>
 
-<p><b>The 79-second tail disqualifies the local model from the alert path.</b>
+<p><b>Jev is the only one of the three that survives the paging path.</b>
 Qwen's median is a tolerable 3.2s, but its worst case was 79 seconds on one
-alert. A router that occasionally takes 79s isn't a router, it's a liability.
-Fine for hourly batch triage; not for the paging path.</p>
+alert — a router that occasionally takes 79s isn't a router, it's a liability.
+Jev's worst case across all 310 alerts: 955ms.</p>
 
 <p><b>Priority is hard for everyone — suspiciously so.</b> 70–75% across three
 very different models is less a model ranking than a smell that my P1/P2/P3

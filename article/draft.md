@@ -1,30 +1,40 @@
-# Do you need an LLM to route alerts? Jev vs Qwen3.8-27B vs Claude Sonnet 5
+# Testing Jev: can a model that can't talk route my alerts?
 
-*310 labeled AIOps alerts, three routers, one question: how much intelligence
-does triage actually need?*
+*TypeSafe's new "System One" model vs two LLM yardsticks — Qwen3.8-27B and
+Claude Sonnet 5 — on 310 labeled AIOps alerts.*
 
 ---
 
-TypeSafe AI came out of stealth last week with Jev, a model they call a "System
-One model." It doesn't generate text. At all. You send it state plus typed
-questions, it sends back probability distributions. Their pitch is basically "a
-smart `if` statement" — 70–500ms, $0.042 per million input tokens, output free.
+Jev can't write a sentence.
 
-I'm building an autonomous ops platform where a supervisor agent routes alerts
-to specialist agents, and every one of those routing decisions is currently an
-LLM call. So the claim I actually care about is narrower than their marketing:
-**can a decision-only model replace an LLM at the routing layer of an agentic
-system?** That's a measurable question. So I measured it.
+That's the whole hook. TypeSafe AI came out of stealth last week with a model
+they call a "System One model": it doesn't generate text at all. You send it
+state plus typed questions, it sends back probability distributions. Their
+pitch is basically "a smart `if` statement" — 70–500ms, $0.042 per million
+input tokens, output free, up to 100x faster and 200x cheaper than using an
+LLM for the same decision.
 
-## The setup
+Those are launch-week numbers from a launch-week company, and I have a place
+where they'd matter: I'm building an autonomous ops platform where a
+supervisor agent routes alerts to specialist agents, and every one of those
+routing decisions is currently an LLM call. If Jev's claims hold, that's
+exactly the layer it should own.
 
-Three routers, same job, same data:
+So this whole post is one experiment with one purpose: **put Jev through
+realistic alert triage and see if it earns the routing layer.** The LLMs in
+the comparison aren't the subject — they're the yardsticks Jev has to measure
+up against.
 
-- **Jev 1.13** via TypeSafe's API
+## The experiment
+
+To judge Jev you need a bar to clear, so it runs against two of them — the
+router I'd use today and the strongest one money buys:
+
+- **Jev 1.13** via TypeSafe's API — the model under test
 - **Qwen3.8-27B** running locally on my M5 Max via LM Studio (the same model
-  from my earlier eval episodes)
-- **Claude Sonnet 5** via OpenRouter, structured outputs, as the frontier
-  baseline
+  from my earlier eval episodes) — the practical yardstick
+- **Claude Sonnet 5** via OpenRouter, structured outputs — the frontier
+  yardstick
 
 The job is L1 triage, mirrored from my AIOps prototype: for each alert, decide
 **category** (capacity / availability / performance / security / noise),
@@ -50,7 +60,7 @@ connection pooling is the difference between claimed and observed latency, and
 if your agent framework makes routing calls without a keep-alive client, you're
 adding half a second of pure handshake to every hop.
 
-## Results
+## How Jev measured up
 
 ![Routing accuracy on 310 labeled AIOps alerts](img/accuracy_light.png)
 
@@ -65,16 +75,17 @@ adding half a second of pure handshake to every hop.
 
 Three things jumped out.
 
-**Sonnet buys you almost nothing here.** The frontier model wins category by 1–3
-points and page_human by one, at 100x Jev's per-alert cost and 14x its latency —
-and it's the *worst* of the three at priority. For structured triage decisions,
-frontier-level reasoning is mostly wasted spend. (Sonnet's run cost $0.75 total.
-Jev's cost $0.0072. The local model cost sixteen minutes of my Mac's time.)
+**Jev gives up almost nothing to the frontier model.** Sonnet wins category by
+3 points and page_human by 9, at 100x Jev's per-alert cost and 14x its latency
+— and Jev actually *beats* it on priority. For structured triage decisions,
+what you're buying from an LLM is mostly wasted reasoning. (Sonnet's run cost
+$0.75 total. Jev's cost $0.0072. The local model cost sixteen minutes of my
+Mac's time.)
 
-**The 79-second tail disqualifies the local model from the alert path.** Qwen's
-median is a tolerable 3.2s, but its worst case was 79 seconds on one alert. A
-router that occasionally takes 79s isn't a router, it's a liability. Fine for
-hourly batch triage; not for the paging path.
+**Jev is the only one of the three that survives the paging path.** Qwen's
+median is a tolerable 3.2s, but its worst case was 79 seconds on one alert —
+a router that occasionally takes 79s isn't a router, it's a liability. Jev's
+worst case across all 310 alerts: 955ms.
 
 **Priority is hard for everyone — suspiciously so.** 70–75% across three very
 different models is less a model ranking than a smell that my P1/P2/P3 gold
