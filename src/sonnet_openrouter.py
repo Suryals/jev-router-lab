@@ -48,19 +48,16 @@ SCHEMA = {
 
 def route_one(client: httpx.Client, alert: str) -> tuple[dict | None, dict]:
     started = time.perf_counter()
-    resp = client.post(URL, json={
-        "model": MODEL,
-        "temperature": 0,
-        "max_tokens": 2000,
-        "usage": {"include": True},
-        "response_format": {"type": "json_schema", "json_schema": {
-            "name": "triage", "strict": True, "schema": SCHEMA}},
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": alert},
-        ],
-    }, timeout=120.0)
-    resp.raise_for_status()
+    for attempt in range(4):
+        try:
+            resp = _post(client, alert)
+            break
+        except (httpx.TransportError, httpx.HTTPStatusError) as e:
+            if isinstance(e, httpx.HTTPStatusError) and e.response.status_code < 500:
+                raise
+            if attempt == 3:
+                raise
+            time.sleep(2**attempt)
     body = resp.json()
     meta = {
         "latency_ms": round((time.perf_counter() - started) * 1000, 1),
@@ -78,18 +75,43 @@ def route_one(client: httpx.Client, alert: str) -> tuple[dict | None, dict]:
         return None, meta
 
 
-def run() -> None:
+def _post(client: httpx.Client, alert: str) -> httpx.Response:
+    resp = client.post(URL, json={
+        "model": MODEL,
+        "temperature": 0,
+        "max_tokens": 2000,
+        "usage": {"include": True},
+        "response_format": {"type": "json_schema", "json_schema": {
+            "name": "triage", "strict": True, "schema": SCHEMA}},
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": alert},
+        ],
+    }, timeout=120.0)
+    resp.raise_for_status()
+    return resp
+
+
+def run(resume_path: str | None = None) -> None:
     RESULTS_DIR.mkdir(exist_ok=True)
-    out_path = RESULTS_DIR / f"sonnet_{time.strftime('%Y%m%d_%H%M%S')}.jsonl"
+    done_ids: set[str] = set()
+    if resume_path:
+        out_path = Path(resume_path)
+        done_ids = {json.loads(l)["id"] for l in out_path.open() if l.strip()}
+        print(f"resuming, {len(done_ids)} already done")
+    else:
+        out_path = RESULTS_DIR / f"sonnet_{time.strftime('%Y%m%d_%H%M%S')}.jsonl"
     hits = {"category": 0, "priority": 0, "page_human": 0}
     n = malformed = 0
     cost = 0.0
     latencies: list[float] = []
     headers = {"Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}"}
 
-    with httpx.Client(headers=headers) as client, ALERTS.open() as f, out_path.open("w") as out:
+    with httpx.Client(headers=headers) as client, ALERTS.open() as f, out_path.open("a") as out:
         for line in f:
             case = json.loads(line)
+            if case["id"] in done_ids:
+                continue
             answer, meta = route_one(client, case["alert"])
             n += 1
             latencies.append(meta["latency_ms"])
@@ -117,4 +139,6 @@ def run() -> None:
 
 
 if __name__ == "__main__":
-    run()
+    import sys
+
+    run(sys.argv[1] if len(sys.argv) > 1 else None)
