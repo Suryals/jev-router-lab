@@ -45,7 +45,7 @@ label, and about a quarter of them deliberately sitting on category boundaries,
 because boundary cases are where routers earn their keep.
 
 Shadow-mode methodology: nothing acts on any answer, everything gets logged and
-scored after. Code and dataset: [repo link].
+scored after. Code and dataset: [github.com/Suryals/jev-router-lab](https://github.com/Suryals/jev-router-lab).
 
 ## Jev's three primitives, and how I mapped triage onto them
 
@@ -196,5 +196,5 @@ the actual LangGraph supervisor as the routing edge. If the shadow numbers
 survive contact with the real alert stream, the LLM in my routing path is
 getting demoted to consultant.
 
-*Dataset, runners, and results: [repo link]. Total API spend for everything in
+*Dataset, runners, and results: [github.com/Suryals/jev-router-lab](https://github.com/Suryals/jev-router-lab). Total API spend for everything in
 this post: $0.77.*
