@@ -8,37 +8,35 @@ Repo: https://github.com/Suryals/jev-router-lab
 
 ## LinkedIn (light card)
 
-Jev can't write a sentence. I spent $0.77 finding out if that matters.
+Jev launched last week. It's a model that doesn't generate text. You send it
+a question with typed options and it sends back probabilities. That's the
+whole model.
 
-TypeSafe launched Jev last week — a "System One model." No text generation at
-all: you send state plus typed questions, it returns probability
-distributions. Their pitch is "a smart if statement" that's 100x faster and
-200x cheaper than an LLM making the same call.
+The launch claims (100x faster, 200x cheaper than an LLM on the same
+decision) read like launch claims, but I have an actual use for this: the
+ops agent I'm building makes every routing decision through an LLM call
+today. So I ran Jev against 310 labeled alerts, with a local Qwen3.8-27B and
+Claude Sonnet 5 as the bar to clear. Shadow mode, everything logged.
 
-I route alerts through an LLM today, so I tested the claim properly: 310
-labeled AIOps alerts, three decisions each (category, priority,
-page-or-not). Jev vs a local Qwen3.8-27B vs Claude Sonnet 5, shadow mode,
-everything logged and scored.
+On categorising alerts Jev got 95% to Sonnet's 98%, at 331ms instead of
+4.6s, for about 1% of the cost. Fine. The part I actually care about is that
+its confidence numbers turned out to be honest: when it says 0.9 or above,
+it's right 98% of the time. Which means you can let Jev route everything and
+only send the uncertain 15% to an LLM. That hybrid scored the same 97% as
+the LLMs did on their own.
 
-What held up:
+It's noticeably worse at the yes/no "page a human?" call. And all three
+models were mediocre at assigning priority, which probably says more about
+my labels than about any of the models. Both of those are in the caveats
+section, where they belong.
 
-— Jev: 95% category accuracy at 331ms median, ~$23 per million alerts.
-Sonnet 5: 98% at 4.6s and ~$2,430 per million.
-— Calibration is the real story. When Jev states ≥0.9 confidence it's right
-98% of the time, so a hybrid — Jev decides everything, the LLM only sees the
-low-confidence 15% — matches the LLMs at 97% for roughly 1% of the cost.
-— Most useful failure: my first benchmark measured my own TLS handshakes,
-not the model. One persistent HTTP client took "Jev latency" from 850ms to
-331ms.
+I also spent the first hour of this benchmarking my own TLS handshakes
+instead of the model. That's in the write-up too.
 
-What didn't hold up: yes/no paging decisions (Jev 79% vs 87–88% for the
-LLMs), and priority was mediocre for all three models — which smells like my
-gold labels, not the models. That's in the caveats.
+Total API spend for the whole experiment: $0.77.
 
-Total spend for the whole experiment: $0.77.
-
-Write-up with charts: https://suryal.dev/articles/jev-vs-qwen3-8-27b-vs-claude-sonnet-5.html
-Code, dataset, every result: https://github.com/Suryals/jev-router-lab
+Write-up: https://suryal.dev/articles/jev-vs-qwen3-8-27b-vs-claude-sonnet-5.html
+Dataset and every result: https://github.com/Suryals/jev-router-lab
 
 ---
 
