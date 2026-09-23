@@ -47,6 +47,45 @@ because boundary cases are where routers earn their keep.
 Shadow-mode methodology: nothing acts on any answer, everything gets logged and
 scored after. Code and dataset: [repo link].
 
+## Jev's three primitives, and how I mapped triage onto them
+
+The entire Jev API is one endpoint and three question types. That constraint
+is the design: if your decision doesn't fit one of these shapes, Jev is the
+wrong tool for it.
+
+- **`noul`** — a yes/no question, answered with a single probability (0–1).
+  I use it for **page_human**: `0.92` means "page," `0.46` means "coin flip,
+  don't wake anyone on my account."
+- **`choice`** — pick one option from a `criteria` map (each option gets a
+  one-line definition). Returns the chosen option, a full probability
+  distribution over all options, and a confidence score. I use it for
+  **category** and **priority** — the criteria strings are doing real work
+  here; they're effectively the prompt.
+- **`score`** — a graded scale with a legend (e.g. Cosmetic → Degraded →
+  Blocking), returning a weighted mean plus distribution. I *didn't* use it:
+  I kept priority as a `choice` because P1/P2/P3 are policy buckets with an
+  on-call contract attached, not points on a continuum. Blast-radius or
+  severity estimation would be the natural `score` use, and it's on the list
+  for the asymmetric-paging follow-up.
+
+One request carries the alert as `state` plus all three questions, and Jev
+evaluates them in parallel against the same state — so triage is one ~330ms
+round trip, not three:
+
+```python
+ask(state={"alert": alert_text}, questions={
+    "category":   choice("What type of alert is this?", CATEGORIES),
+    "priority":   choice("What priority should this alert get?", PRIORITIES),
+    "page_human": noul("Should this alert page an on-call human right now, "
+                       "as opposed to being handled by automation or a ticket?"),
+})
+```
+
+Two field-notes from wiring this up: `choice` takes `criteria`, not `options`
+(the SDK examples hide the raw shape), and the criteria wording is your main
+tuning lever — my noise-vs-performance confusions later in this post trace
+straight back to how I phrased those one-liners.
+
 ## First lesson: I benchmarked my own TLS handshakes
 
 My first Jev run measured p50 850ms and I nearly wrote off their latency claims.
