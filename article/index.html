@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Do you need an LLM to route alerts? Jev vs Qwen3.8-27B vs Claude Sonnet 5 — Surya</title>
+<meta name="description" content="310 labeled AIOps alerts, three routers, one question: how much intelligence does triage actually need? A shadow-mode eval of TypeSafe's Jev decision model against a local Qwen and Claude Sonnet 5.">
+<meta name="theme-color" content="#FBFAF7">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF7;--paper-2:#F3F1EA;--ink:#172B39;--ink-soft:#52616A;
+  --line:#E2E0D8;--line-strong:#D4DAD7;--accent:#076C66;
+  --serif:"Fraunces",Georgia,serif;--sans:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media(prefers-color-scheme:dark){:root{
+  --paper:#16211E;--paper-2:#1D2A26;--ink:#EDEBE3;--ink-soft:#A8B3AE;
+  --line:#2C3A35;--line-strong:#3A4A44;--accent:#3FB8AE;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:17px;line-height:1.72;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:0 22px}
+.article-header{padding:72px 0 8px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{font-family:var(--serif);font-weight:500;font-size:clamp(34px,5.4vw,52px);
+  line-height:1.08;margin:14px 0 10px}
+.article-sub{font-family:var(--serif);font-style:italic;font-size:clamp(19px,2.6vw,23px);
+  color:var(--ink-soft);margin:0 0 22px;line-height:1.4}
+.article-meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+.article-meta .sep{margin:0 8px;opacity:.5}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:34px 0 8px}
+.tile{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;
+  padding:14px 14px 12px}
+.tile small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+.tile b{display:block;font-family:var(--serif);font-size:24px;font-weight:500;line-height:1.1}
+.tile span{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:5px}
+@media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+h2{font-family:var(--serif);font-weight:500;font-size:clamp(24px,3.4vw,31px);
+  line-height:1.2;margin:2.1em 0 .55em}
+p{margin:0 0 1.15em}
+b,strong{font-weight:600}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--paper-2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+figure{margin:36px 0;border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;background:var(--paper)}
+figure img{display:block;width:100%;height:auto}
+figcaption{font-family:var(--mono);font-size:11.5px;line-height:1.6;color:var(--ink-soft);
+  padding:14px 18px;border-top:1px solid var(--line)}
+.table-wrap{overflow-x:auto;margin:26px 0 30px;border:1px solid var(--line);
+  border-radius:12px;background:var(--paper)}
+table{width:100%;border-collapse:collapse;text-align:left;font-family:var(--mono);
+  font-size:12px;line-height:1.65;font-variant-numeric:tabular-nums}
+th,td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:10.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-soft);background:var(--paper-2)}
+td{color:var(--ink-soft)}
+td:first-child{color:var(--ink);font-weight:500}
+tr:last-child td{border-bottom:0}
+@media(max-width:600px){table{min-width:560px}}
+ul{padding-left:1.25em;margin:0 0 1.15em}
+li{margin-bottom:.5em}
+.endnote{font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);
+  border-top:1px solid var(--line);margin-top:44px;padding:20px 0 64px;line-height:1.7}
+</style>
+</head><body>
+<main><div class="wrap">
+
+<header class="article-header">
+  <span class="eyebrow">Lab notebook · Agentic AIOps</span>
+  <h1>Do you need an LLM to route alerts?</h1>
+  <p class="article-sub">Jev vs Qwen3.8-27B vs Claude Sonnet 5 — 310 labeled AIOps alerts, three routers, one question: how much intelligence does triage actually need?</p>
+  <div class="article-meta"><span>Suryaprakash Lakshmanan</span><span class="sep">·</span><span>September 2026</span></div>
+  <div class="tiles">
+    <div class="tile"><small>Alerts</small><b>310</b><span>labeled · 3 decisions each</span></div>
+    <div class="tile"><small>Jev median</small><b>331ms</b><span>after fixing my client</span></div>
+    <div class="tile"><small>Jev per 1M alerts</small><b>~$23</b><span>vs ~$2,430 Sonnet 5</span></div>
+    <div class="tile"><small>Total spend</small><b>$0.77</b><span>measured, everything</span></div>
+  </div>
+</header>
+
+<article>
+
+<p>TypeSafe AI came out of stealth last week with Jev, a model they call a
+"System One model." It doesn't generate text. At all. You send it state plus
+typed questions, it sends back probability distributions. Their pitch is
+basically "a smart <code>if</code> statement" — 70–500ms, $0.042 per million
+input tokens, output free.</p>
+
+<p>I'm building an autonomous ops platform where a supervisor agent routes
+alerts to specialist agents, and every one of those routing decisions is
+currently an LLM call. So the claim I actually care about is narrower than
+their marketing: <b>can a decision-only model replace an LLM at the routing
+layer of an agentic system?</b> That's a measurable question. So I measured
+it.</p>
+
+<h2>The setup</h2>
+
+<p>Three routers, same job, same data:</p>
+<ul>
+  <li><b>Jev 1.13</b> via TypeSafe's API</li>
+  <li><b>Qwen3.8-27B</b> running locally on my M5 Max via LM Studio (the same
+  model from my earlier eval episodes)</li>
+  <li><b>Claude Sonnet 5</b> via OpenRouter, structured outputs, as the
+  frontier baseline</li>
+</ul>
+
+<p>The job is L1 triage, mirrored from my AIOps prototype: for each alert,
+decide <b>category</b> (capacity / availability / performance / security /
+noise), <b>priority</b> (P1/P2/P3), and <b>page_human</b> (yes/no). Every
+router answers the same three questions about the same 310 synthetic
+big-data-platform alerts — Kafka lag, BQ job failures, cert expiries, flapping
+hosts — each with a gold label, and about a quarter of them deliberately
+sitting on category boundaries, because boundary cases are where routers earn
+their keep.</p>
+
+<p>Shadow-mode methodology: nothing acts on any answer, everything gets logged
+and scored after. Code and dataset: <a href="#">[repo link]</a>.</p>
+
+<h2>First lesson: I benchmarked my own TLS handshakes</h2>
+
+<p>My first Jev run measured p50 850ms and I nearly wrote off their latency
+claims. Then I looked at a curl timing breakdown: ~300ms TCP round trip to
+their US endpoint (I'm in India — physics), plus ~300ms of TLS handshake
+<b>on every call</b>, because my client opened a fresh connection each
+time.</p>
+
+<p>One persistent <code>httpx.Client</code> later: <b>p50 331ms</b>, of which
+maybe 50–100ms is actual inference. Their 70–500ms claim holds. Old SRE
+lesson, new costume: connection pooling is the difference between claimed and
+observed latency, and if your agent framework makes routing calls without a
+keep-alive client, you're adding half a second of pure handshake to every
+hop.</p>
+
+<h2>Results</h2>
+
+<figure>
+  <picture>
+    <source srcset="img/accuracy_dark.png" media="(prefers-color-scheme: dark)">
+    <img src="img/accuracy_light.png" alt="Grouped bar chart of routing accuracy for Jev, Qwen3.8-27B and Sonnet 5 on category, priority and page-human decisions. All three are within a few points of each other on every decision.">
+  </picture>
+  <figcaption>Three very different models, near-identical accuracy. The gaps that matter are in the next table's latency and cost rows.</figcaption>
+</figure>
+
+<div class="table-wrap"><table>
+<thead><tr><th>n=310, same schema</th><th>Jev 1.13</th><th>Qwen3.8-27B (local)</th><th>Sonnet 5</th></tr></thead>
+<tbody>
+<tr><td>category</td><td>95%</td><td>97%</td><td><b>98%</b></td></tr>
+<tr><td>priority</td><td>72%</td><td><b>75%</b></td><td>70%</td></tr>
+<tr><td>page_human</td><td>79%</td><td>87%</td><td><b>88%</b></td></tr>
+<tr><td>latency p50 / max</td><td><b>331ms / 955ms</b></td><td>3.2s / 79s</td><td>4.6s / 9.3s</td></tr>
+<tr><td>cost per alert</td><td><b>$0.000023</b></td><td>$0 marginal</td><td>$0.0024</td></tr>
+<tr><td>cost per 1M alerts</td><td><b>~$23</b></td><td>$0 marginal</td><td>~$2,430</td></tr>
+</tbody></table></div>
+
+<p>Three things jumped out.</p>
+
+<p><b>Sonnet buys you almost nothing here.</b> The frontier model wins
+category by 1–3 points and page_human by one, at 100x Jev's per-alert cost and
+14x its latency — and it's the <em>worst</em> of the three at priority. For
+structured triage decisions, frontier-level reasoning is mostly wasted spend.
+(Sonnet's run cost $0.75 total. Jev's cost $0.0072. The local model cost
+sixteen minutes of my Mac's time.)</p>
+
+<p><b>The 79-second tail disqualifies the local model from the alert path.</b>
+Qwen's median is a tolerable 3.2s, but its worst case was 79 seconds on one
+alert. A router that occasionally takes 79s isn't a router, it's a liability.
+Fine for hourly batch triage; not for the paging path.</p>
+
+<p><b>Priority is hard for everyone — suspiciously so.</b> 70–75% across three
+very different models is less a model ranking than a smell that my P1/P2/P3
+gold labels have ambiguity in them. I'm treating that as a rubric problem to
+fix, not a finding to publish. (Caveat repeated below, because it matters.)</p>
+
+<h2>The interesting part: calibration</h2>
+
+<p>Accuracy was never really the question — the question is whether Jev
+<b>knows when it doesn't know</b>, because that's what makes a fast/slow
+hybrid architecture work.</p>
+
+<figure>
+  <picture>
+    <source srcset="img/calibration_dark.png" media="(prefers-color-scheme: dark)">
+    <img src="img/calibration_light.png" alt="Bar chart of Jev's actual hit rate per stated-confidence bucket on the category decision. The under-0.5 bucket hits 67%, mid buckets about 76%, and the 0.9-and-above bucket (262 of 310 answers) hits 98%, closely tracking the stated confidence.">
+  </picture>
+  <figcaption>Hit rate per stated-confidence bucket, category decision. Orange dots: mean stated confidence. The ≥0.9 bucket holds 262 of 310 answers and delivers 98%.</figcaption>
+</figure>
+
+<p>On the category decision, Jev put 262 of 310 answers in the ≥0.9 confidence
+bucket and was right on 98% of them. Below 0.9, accuracy drops to ~75% — and
+Jev <em>tells you so</em> by lowering its stated confidence. My favorite single
+result: a Dataproc cluster losing workers while the autoscaler recovered them.
+Jev classified it correctly at 0.34 confidence — which is exactly the answer
+you want from an L1: "here's my guess, but escalate this one."</p>
+
+<p>It's not infallible. Five answers were confidently wrong (≥0.9 confidence,
+wrong category) — mostly noise-vs-something boundary cases, like a
+known-misconfigured cron's failed logins classified as <code>security</code>
+at 0.99. A threshold policy alone will never catch those five. Calibration
+means the confidence numbers are honest on average, not that any single 0.99
+is a guarantee.</p>
+
+<h2>The architecture that falls out</h2>
+
+<p>Gate on confidence: Jev answers everything; below 0.9, escalate to an
+LLM.</p>
+
+<p>On category, that hybrid hits <b>97% — matching the LLMs — while escalating
+only 48 of 310 alerts</b> (15%). And here's the detail I didn't expect: it
+scores 97% <em>regardless of whether the fallback is local Qwen or Sonnet</em>,
+because only the hard 15% ever reaches the fallback. So the rational stack is
+Jev + the local model: ~$23 per million alerts, sub-second median, no external
+dependency on the escalation path, and the slow model only wakes up where
+latency matters least.</p>
+
+<p>That's the Kahneman framing TypeSafe is selling, but with my own numbers
+attached: System One handles 85% of decisions in 331ms, System Two gets the
+weird 15%.</p>
+
+<p>Where the thesis is weaker: the yes/no <code>page_human</code> decision. A
+naive 0.5 threshold on Jev's probability loses badly to the LLMs (79% vs
+87–88%), and confidence-gating it escalates most of the traffic. Paging is a
+judgment call with asymmetric costs — over-paging is annoying, under-paging is
+an incident — and I think the fix is asymmetric thresholds rather than a
+smarter model. That's the next experiment.</p>
+
+<h2>Caveats, because lab notebook</h2>
+
+<ul>
+  <li><b>The gold labels are synthetic and Claude-generated.</b> I'm
+  re-labeling a sample by hand to check them; the priority ambiguity above is
+  exactly the kind of thing that process should catch. Treat the absolute
+  numbers as provisional, the relative gaps as robust.</li>
+  <li>One run per model, temperature 0, no repeats — variance unmeasured.</li>
+  <li>Latency measured from India; US readers will see Jev closer to its
+  ~100ms claim, and my Sonnet numbers include OpenRouter overhead.</li>
+  <li>Jev's documented weak spots (math, date logic, multi-hop conditions)
+  barely appear in this task. A triage schema that needs "is this timestamp
+  within the maintenance window" would hit them; mine keeps that in
+  application code, where it belongs.</li>
+</ul>
+
+<h2>What's next</h2>
+
+<p>Asymmetric paging thresholds, hand-verified labels, and wiring the hybrid
+into the actual LangGraph supervisor as the routing edge. If the shadow
+numbers survive contact with the real alert stream, the LLM in my routing path
+is getting demoted to consultant.</p>
+
+<p class="endnote">Dataset, runners, and results: <a href="#">[repo link]</a>.
+Total API spend for everything in this post: $0.77. Written up from the lab
+notebook; charts render from the committed result files.</p>
+
+</article>
+</div></main>
+</body></html>
