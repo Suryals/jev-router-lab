@@ -8,11 +8,12 @@ Repo: https://github.com/Suryals/jev-router-lab
 
 ## LinkedIn (light card)
 
-A model that can't generate text just out-routed my LLM.
+Jev can't write a sentence. I spent $0.77 finding out if that matters.
 
 TypeSafe launched Jev last week — a "System One model." No text generation at
 all: you send state plus typed questions, it returns probability
-distributions. Their pitch is "a smart if statement."
+distributions. Their pitch is "a smart if statement" that's 100x faster and
+200x cheaper than an LLM making the same call.
 
 I route alerts through an LLM today, so I tested the claim properly: 310
 labeled AIOps alerts, three decisions each (category, priority,
