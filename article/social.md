@@ -25,6 +25,11 @@ it's right 98% of the time. Which means you can let Jev route everything and
 only send the uncertain 15% to an LLM. That hybrid scored the same 97% as
 the LLMs did on their own.
 
+For agentic AIOps and SRE flows specifically, that's the profile you want in
+the routing layer: fast enough to sit in the paging path, cheap enough to
+run on every alert, and it tells you when to escalate instead of guessing
+confidently.
+
 It's noticeably worse at the yes/no "page a human?" call. And all three
 models were mediocre at assigning priority, which probably says more about
 my labels than about any of the models. Both of those are in the caveats

@@ -42,26 +42,26 @@ def card(mode: str, c: dict) -> None:
     # accent tick + eyebrow
     ax.add_patch(plt.Rectangle((80, 84), 46, 7, color=c["series"][0]))
     ax.text(142, 96, "LAB NOTEBOOK  /  SHADOW-MODE EVAL", fontsize=15,
-            color=c["series"][0], fontweight="bold", family="monospace", va="center")
+            color=c["series"][0], fontweight="bold", family="Helvetica Neue", va="center")
     ax.text(1520, 96, "310 labeled AIOps alerts · suryal.dev", fontsize=14,
-            color=c["ink2"], family="monospace", va="center", ha="right")
+            color=c["ink2"], family="Helvetica Neue", va="center", ha="right")
 
     ax.text(80, 200, "Testing Jev:", fontsize=58, color=c["ink"],
-            family="serif", fontweight="bold", va="center")
+            family="Helvetica Neue", fontweight="bold", va="center")
     ax.text(80, 288, "can a model that can't talk route my alerts?",
-            fontsize=38, color=c["ink"], family="serif", va="center")
+            fontsize=38, color=c["ink"], family="Helvetica Neue", va="center")
     ax.text(80, 360, "Jev 1.13  vs  Qwen3.8-27B (local)  vs  Claude Sonnet 5",
-            fontsize=19, color=c["ink2"], family="monospace", va="center")
+            fontsize=19, color=c["ink2"], family="Helvetica Neue", va="center")
 
     # accuracy mini-chart (right side)
     x0, y0, w = 900, 430, 620
     ax.text(x0, y0 - 14, "accuracy · category / priority / page-human",
-            fontsize=13, color=c["ink2"], family="monospace")
+            fontsize=13, color=c["ink2"], family="Helvetica Neue")
     bar_h, gap = 22, 10
     y = y0 + 16
     for mi, (model, vals) in enumerate(BARS.items()):
         ax.text(x0, y + bar_h * 1.5 + gap, model, fontsize=14, color=c["ink"],
-                family="monospace", fontweight="bold", va="center",
+                family="Helvetica Neue", fontweight="bold", va="center",
                 rotation=0) if False else None
         for vi, v in enumerate(vals):
             yy = y + vi * (bar_h + 4)
@@ -70,9 +70,9 @@ def card(mode: str, c: dict) -> None:
             ax.add_patch(plt.Rectangle((x0 + 150, yy), (w - 150) * v / 100, bar_h,
                                        color=c["series"][mi]))
             ax.text(x0 + 150 + (w - 150) * v / 100 + 10, yy + bar_h / 2, f"{v}%",
-                    fontsize=12, color=c["ink"], family="monospace", va="center")
+                    fontsize=12, color=c["ink"], family="Helvetica Neue", va="center")
         ax.text(x0, y + (bar_h + 4) * 1.5 - 2, model, fontsize=13, color=c["ink"],
-                family="monospace", fontweight="bold", va="center")
+                family="Helvetica Neue", fontweight="bold", va="center")
         y += 3 * (bar_h + 4) + 18
 
     # stat tiles (left column, 2x2)
@@ -84,14 +84,21 @@ def card(mode: str, c: dict) -> None:
                                     boxstyle="round,pad=0,rounding_size=14",
                                     fc=c["panel"], ec=c["line"], lw=1.2))
         ax.text(px + 24, py + 36, label, fontsize=12, color=c["ink2"],
-                family="monospace", va="center")
+                family="Helvetica Neue", va="center")
         ax.text(px + 24, py + 84, big, fontsize=36, color=c["ink"],
-                family="serif", fontweight="bold", va="center")
+                family="Helvetica Neue", fontweight="bold", va="center")
         ax.text(px + 24, py + 124, sub, fontsize=13, color=c["ink2"],
-                family="monospace", va="center")
+                family="Helvetica Neue", va="center")
 
-    ax.text(80, 836, "One experiment, every result in the repo:  github.com/Suryals/jev-router-lab",
-            fontsize=15, color=c["ink2"], family="monospace", va="center")
+    # takeaway strip
+    ax.add_patch(plt.Rectangle((80, 786), 7, 26, color=c["series"][0]))
+    ax.text(102, 799, "Fast, cheap, and it knows when it's unsure — a strong candidate "
+                      "for AIOps & SRE agentic flows.",
+            fontsize=19, color=c["ink"], family="Helvetica Neue",
+            fontweight="bold", va="center")
+
+    ax.text(102, 848, "One experiment, every result in the repo:  github.com/Suryals/jev-router-lab",
+            fontsize=15, color=c["ink2"], family="Helvetica Neue", va="center")
 
     out = IMG / f"card_{mode}.png"
     fig.savefig(out, facecolor=c["surface"])
